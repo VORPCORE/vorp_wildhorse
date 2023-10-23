@@ -54,7 +54,7 @@ local tamestate = 0
 
 Citizen.CreateThread(function() -- captures event when you break horse in
     while true do
-        Wait(200)
+        Wait(0)
         local size = GetNumberOfEvents(0)
         if size > 0 then
             for i = 0, size - 1 do
