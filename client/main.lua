@@ -1,58 +1,57 @@
----@diagnostic disable: undefined-global
-local VORPCore = {}
+local Core = exports.vorp_core:GetCore()
 
-TriggerEvent("getCore", function(core)
-    VORPCore = core
-end)
-
-
-
-RegisterNetEvent("vorp:SelectedCharacter", function()
+local function spawnNpc()
     for i, v in ipairs(Config.trainers) do
         if Config.aiTrainerped then
-            -- Loading Model
             local hashModel = (v.npcmodel)
-            if IsModelValid(hashModel) then
-                RequestModel(hashModel)
+            if not IsModelValid(hashModel) then
+                print("Model not valid", hashModel)
+                return
+            end
+
+            if not HasModelLoaded(hashModel) then
+                RequestModel(hashModel, false)
                 while not HasModelLoaded(hashModel) do
                     Wait(100)
                 end
-            else
-                print(v.npcmodel .. " is not valid") -- Concatenations
             end
-            -- Spawn Ped
-            local npc = CreatePed(joaat(hashModel), v.coords, v.heading, false, true, true, true)
-            Citizen.InvokeNative(0x283978A15512B2FE, npc, true) -- SetRandomOutfitVariation
+
+            local npc = CreatePed(joaat(hashModel), v.coords.x, v.coords.y, v.coords.z, v.heading, false, false, false,
+                false)
+            repeat Wait(0) until DoesEntityExist(npc)
+            SetRandomOutfitVariation(npc, true)
             SetEntityNoCollisionEntity(PlayerPedId(), npc, false)
             SetEntityCanBeDamaged(npc, false)
             SetEntityInvincible(npc, true)
             Wait(1000)
-            FreezeEntityPosition(npc, true)                                         -- NPC can't escape
-            SetBlockingOfNonTemporaryEvents(npc, true)                              -- NPC can't be scared
+            FreezeEntityPosition(npc, true)
+            SetBlockingOfNonTemporaryEvents(npc, true)
+            v.NpcHandle = npc
         end
-        local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, v.coords) -- Blip Creation
-        SetBlipSprite(blip, v.blip, true)                                           -- Blip Texture
-        Citizen.InvokeNative(0x9CB1A1623062F402, blip, v.trainername)               -- Name of Blip
     end
+end
+
+local function createBlip()
+    for i, v in ipairs(Config.trainers) do
+        local blip = BlipAddForCoords(1664425300, v.coords.x, v.coords.y, v.coords.z)
+        SetBlipSprite(blip, v.blip, true)
+        SetBlipName(blip, v.trainername)
+        v.BlipHandle = blip
+    end
+end
+
+
+
+RegisterNetEvent("vorp:SelectedCharacter", function()
+    Wait(5000)
+    spawnNpc()
+    createBlip()
 end)
 
 
-
-function drawTxt(text, x, y, fontscale, fontsize, r, g, b, alpha, textcentred, shadow) -- Text function
-    local str = CreateVarString(10, "LITERAL_STRING", text)
-    SetTextScale(fontscale, fontsize)
-    SetTextColor(r, g, b, alpha)
-    SetTextCentre(textcentred)
-    if shadow then
-        SetTextDropshadow(1, 0, 0, 255)
-    end
-    SetTextFontForCurrentCommand(1)
-    DisplayText(str, x, y)
-end
-
 local tamestate = 0
-
-Citizen.CreateThread(function() -- captures event when you break horse in
+CreateThread(function() -- captures event when you break horse in
+    repeat Wait(0) until LocalPlayer.state.IsInSession
     while true do
         Wait(0)
         local size = GetNumberOfEvents(0)
@@ -67,12 +66,12 @@ Citizen.CreateThread(function() -- captures event when you break horse in
     end
 end)
 
-local function sellAnimal()                                               -- Selling horse function
-    local horse = Citizen.InvokeNative(0xE7E11B8DCBED1058, PlayerPedId()) -- Gets mount
+local function sellAnimal(coords)         -- Selling horse function
+    local horse = GetMount(PlayerPedId()) -- Gets mount
     local model = GetEntityModel(horse)
     if model ~= 0 then
-        if tamestate > 0 then                    -- checks to see if you recently broke the horse in
-            if Config.Animals[model] ~= nil then -- Paying for animals
+        if tamestate > 0 then             -- checks to see if you recently broke the horse in
+            if Config.Animals[model] then -- Paying for animals
                 local animal = Config.Animals[model]
 
                 local data = {
@@ -80,49 +79,78 @@ local function sellAnimal()                                               -- Sel
                     gold = animal.gold,
                     rolPoints = animal.rolPoints,
                     xp = animal.xp,
+                    coords = coords
                 }
+
                 TriggerServerEvent("vorp_sellhorse:giveReward", data)
-                VORPCore.NotifyRightTip(Config.Language.AnimalSold, 4000) -- Sold notification
+                Core.NotifyRightTip(Config.Language.AnimalSold, 4000) -- Sold notification
                 DeletePed(horse)
                 Wait(100)
                 tamestate = 0
             else
-                VORPCore.NotifyRightTip(Config.Language.NotInTheTrainer, 4000) -- Notification when horse is not recognized
+                Core.NotifyRightTip(Config.Language.NotInTheTrainer, 4000) -- Notification when horse is not recognized
             end
         else
-            VORPCore.NotifyRightTip(Config.Language.NotBroken, 4000) -- Notification when you didn't break the horse
+            Core.NotifyRightTip(Config.Language.NotBroken, 4000) -- Notification when you didn't break the horse
         end
     else
-        VORPCore.NotifyRightTip(Config.Language.NoMount, 4000) -- Notification when you don't have a mount
+        Core.NotifyRightTip(Config.Language.NoMount, 4000) -- Notification when you don't have a mount
     end
 end
 
 
+local function createPrompt()
+    local promptGroup = GetRandomIntInRange(0, 0x7FFFFFFF)
+    local prompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(prompt, 0xD9D0E1C0)
+    UiPromptSetText(prompt, Config.trainers[1].pressToSell)
+    UiPromptSetEnabled(prompt, true)
+    UiPromptSetVisible(prompt, true)
+    UiPromptSetStandardMode(prompt, true)
+    UiPromptSetGroup(prompt, promptGroup, 0)
+    UiPromptRegisterEnd(prompt)
+    return promptGroup, prompt
+end
 
-
-Citizen.CreateThread(function()
+CreateThread(function()
+    repeat Wait(0) until LocalPlayer.state.IsInSession
+    local group, prompt = createPrompt()
     while true do
         local sleep = 1000
         for index, v in ipairs(Config.trainers) do
             local playerCoords = GetEntityCoords(PlayerPedId())
             local distance = #(playerCoords - v.coords)
 
+            if distance < 80 then
+                if not v.NpcHandle then
+                    spawnNpc()
+                end
+            else
+                if v.NpcHandle then
+                    if DoesEntityExist(v.NpcHandle) then
+                        DeleteEntity(v.NpcHandle)
+                    end
+                    v.NpcHandle = nil
+                end
+            end
+
             if distance <= v.radius then
                 sleep = 0
-                drawTxt(v.pressToSell, 0.5, 0.9, 0.7, 0.7, 255, 255, 255, 255, true, true)
-                if IsControlJustPressed(2, 0xD9D0E1C0) then
+                local label = VarString(10, "LITERAL_STRING", v.trainername)
+                UiPromptSetActiveGroupThisFrame(group, label, 0, 0, 0, 0)
+                if UiPromptHasStandardModeCompleted(prompt, 0) then -- need to add here player is in the locations
                     if Config.joblocked then
-                        VORPCore.RpcCall('vorp_sellhorse:getjob', function(result)
+                        Core.Callback.TriggerAsync('vorp_sellhorse:getjob', function(result)
                             if result then
-                                sellAnimal()
+                                sellAnimal(v.coords)
                             else
-                                VORPCore.NotifyRightTip(Config.Language.notatrainer .. " : " .. v.trainerjob, 4000)
+                                Core.NotifyRightTip(Config.Language.notatrainer .. " : " .. v.trainerjob, 4000)
                             end
                         end, index)
                     else
-                        sellAnimal()
+                        sellAnimal(v.coords)
                     end
-                    Citizen.Wait(1000)
+                    Wait(1000)
                 end
             end
         end

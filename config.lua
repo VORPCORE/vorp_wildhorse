@@ -17,7 +17,7 @@ Config.trainers = {
     {
         trainername = "Blackwater Trainer",
         trainerjob = { "trainer" },
-        pressToSell = "Press [~e~Space~q~] to sell",
+        pressToSell = "sell",
         blip = -1103135225,
         npcmodel = "A_M_M_ValFarmer_01",
         coords = vector3(-867.119, -1356.823, 42.64),
@@ -28,7 +28,7 @@ Config.trainers = {
     {
         trainername = "Saint Denis Trainer",
         trainerjob = { "trainer" },
-        pressToSell = "Press [~e~Space~q~] to sell",
+        pressToSell = "sell",
         blip = -1103135225,
         npcmodel = "A_M_M_ValFarmer_01",
         coords = vector3(2505.631, -1462.162, 45.36),
@@ -39,7 +39,7 @@ Config.trainers = {
     {
         trainername = "Armadillo Trainer",
         trainerjob = { "trainer" },
-        pressToSell = "Press [~e~Space~q~] to sell",
+        pressToSell = "sell",
         blip = -1103135225,
         npcmodel = "A_M_M_ValFarmer_01",
         coords = vector3(-3712.42, -2570.96, -13.60),
@@ -48,11 +48,29 @@ Config.trainers = {
     }
 }
 
+Config.SkillName = "HorseTaming" -- you need to add this skill to vorp_core config skills
 
+Config.SkillsLevel = {           -- vorp core must have the same amount of skills for this
+    [1] = {
+        percentage = 0.01,       -- if level 1 you get 1% more money
+    },
+    [2] = {
+        percentage = 0.02, -- if level 2 you get 2% more money
+    },
+    [3] = {
+        percentage = 0.03, -- if level 3 you get 3% more money
+    },
+    [4] = {
+        percentage = 0.04, -- if level 4 you get 4% more money
+    },
+    [5] = {
+        percentage = 0.05, -- if level 5 you get 5% more money
+    }
+}
 
 Config.Animals = {
     -- Animals
-    [-1963397600] = { name = "AmericanPaint_Greyovero", money = 27.0, gold = 0, rolPoints = 0, xp = 3 },
+    [-1963397600] = { name = "AmericanPaint_Greyovero", money = 27.0, gold = 0, rolPoints = 0, xp = 3 }, --XP WILL BE DO INCREASE SKILL LEVEL EVERYTIME THEY SELL A HORSE
     [-450053710]  = { name = "AmericanPaint_Overo", money = 27.0, gold = 0, rolPoints = 0, xp = 3 },
     [1792770814]  = { name = "AmericanPaint_SplashedWhite", money = 28.0, gold = 0, rolPoints = 0, xp = 3 },
     [-167968797]  = { name = "AmericanPaint_Tobiano", money = 29.0, gold = 0, rolPoints = 0, xp = 3 },

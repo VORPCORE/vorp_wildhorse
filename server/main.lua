@@ -1,13 +1,36 @@
-local VorpCore = {}
-
-TriggerEvent("getCore", function(core)
-    VorpCore = core
-end)
-
+local Core = exports.vorp_core:GetCore()
 
 RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
     local _source = source
-    local Character = VorpCore.getUser(_source).getUsedCharacter
+    local Character = Core.getUser(_source)
+    if not Character then
+        return
+    end
+    local sourcePed= GetPlayerPed(_source)
+    local sourceCoords = GetEntityCoords(sourcePed)
+    local distance = #(data.coords - sourceCoords)
+    if distance > 5 then
+        print(_source, Character.identifier, " this is a cheater bann player ")
+        Core.AddWebhook("Cheater", Config.WebhookCheatLog,
+            "player with steam: " .. Character.identifier .. " server id: " .. _source .. " is cheating")
+        return
+    end
+
+    Character = Character.getUsedCharacter
+    local skills = Character.skills
+    if not skills then return error("update vorp core") end
+    if not skills[Config.SkillName] then error("skill not found in vorp core config") end
+
+    local skill = skills[Config.SkillName]
+    local skillLevel = skill.Level
+
+    if Config.SkillsLevel[skillLevel] then
+        local percentage = Config.SkillsLevel[skillLevel].percentage
+        data.money = data.money + (data.money * percentage)
+        data.gold = data.gold + (data.gold * percentage)
+        data.rolPoints = data.rolPoints + (data.rolPoints * percentage)
+    end
+
     if type(data) == "table" then
         if data.money ~= 0 then
             Character.addCurrency(0, data.money)
@@ -20,13 +43,11 @@ RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
         if data.rolPoints ~= 0 then
             Character.addCurrency(2, data.rolPoints)
         end
-
-        if data.xp ~= 0 then
-            Character.addXp(data.xp)
-        end
+        -- add xp to skill
+        Character.setSkills(Config.SkillName, data.xp)
     else
         print(_source, Character.identifier, " this is a cheater bann player ")
-        VorpCore.AddWebhook("Cheater", Config.WebhookCheatLog,
+        Core.AddWebhook("Cheater", Config.WebhookCheatLog,
             "player with steam: " .. Character.identifier .. " server id: " .. _source .. " is cheating")
     end
 end)
@@ -40,14 +61,14 @@ local function CheckJob(index, job)
     return false
 end
 
-VorpCore.addRpcCallback('vorp_sellhorse:getjob', function(source, cb, args)
+Core.Callback.Register('vorp_sellhorse:getjob', function(source, cb, args)
     local _source = source
     local index = args
-    local Character = VorpCore.getUser(_source).getUsedCharacter
+    local Character = Core.getUser(_source).getUsedCharacter
     local job = Character.job
     if CheckJob(index, job) then
         return cb(true)
     end
-    VorpCore.NotifyObjective(_source, "you do not have the right job to sell this animal", 4000)
+    Core.NotifyObjective(_source, "you do not have the right job to sell this animal", 4000)
     return cb(false)
 end)
