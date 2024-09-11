@@ -51,7 +51,7 @@ end)
 
 local tamestate = 0
 CreateThread(function() -- captures event when you break horse in
-    repeat Wait(0) until LocalPlayer.state.IsInSession
+    repeat Wait(5000) until LocalPlayer.state.IsInSession
     while true do
         Wait(0)
         local size = GetNumberOfEvents(0)
@@ -113,7 +113,7 @@ local function createPrompt()
 end
 
 CreateThread(function()
-    repeat Wait(0) until LocalPlayer.state.IsInSession
+    repeat Wait(5000) until LocalPlayer.state.IsInSession
     local group, prompt = createPrompt()
     while true do
         local sleep = 1000
@@ -138,6 +138,7 @@ CreateThread(function()
                 sleep = 0
                 local label = VarString(10, "LITERAL_STRING", v.trainername)
                 UiPromptSetActiveGroupThisFrame(group, label, 0, 0, 0, 0)
+
                 if UiPromptHasStandardModeCompleted(prompt, 0) then -- need to add here player is in the locations
                     if Config.joblocked then
                         Core.Callback.TriggerAsync('vorp_sellhorse:getjob', function(result)
@@ -158,6 +159,22 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
+AddEventHandler("onResouceStop", function(resourceName)
+    if GetCurrentResourceName() ~= resourceName then return end
+    for i, v in ipairs(Config.trainers) do
+        if v.NpcHandle then
+            if DoesEntityExist(v.NpcHandle) then
+                DeleteEntity(v.NpcHandle)
+            end
+        end
+
+        if v.BlipHandle then
+            RemoveBlip(v.BlipHandle)
+        end
+    end
+end)
+
 
 -- DEV TOOLS --
 
