@@ -1,9 +1,9 @@
 <1.1>
---added skill levels and payment percentage based on levels
---changed configs
---make sure to add the skill name to vorp core configs
---drawtext removed it uses prompts now
---added to the while loops to wait for character selection
---added coords check to server side for security
---new callback and exports also were added
+- added skill levels and payment percentage based on levels
+- changed configs
+- make sure to add the skill name to vorp core configs
+- drawtext removed it uses prompts now
+- added to the while loops to wait for character selection
+- added coords check to server side for security
+- new callback and exports also were added
 <1.0>
