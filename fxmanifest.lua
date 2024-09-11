@@ -12,7 +12,7 @@ shared_script 'config.lua'
 client_script 'client/main.lua'
 server_script 'server/main.lua'
 
-version '1.0'
+version '1.1'
 vorp_checker 'yes'
 vorp_name '^4Resource version Check^3'
 vorp_github 'https://github.com/VORPCORE/vorp_wildhorse'
