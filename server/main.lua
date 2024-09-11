@@ -6,7 +6,7 @@ RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
     if not Character then
         return
     end
-    local sourcePed= GetPlayerPed(_source)
+    local sourcePed = GetPlayerPed(_source)
     local sourceCoords = GetEntityCoords(sourcePed)
     local distance = #(data.coords - sourceCoords)
     if distance > 5 then
@@ -23,9 +23,17 @@ RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
 
     local skill = skills[Config.SkillName]
     local skillLevel = skill.Level
-
-    if Config.SkillsLevel[skillLevel] then
-        local percentage = Config.SkillsLevel[skillLevel].percentage
+    local skillMaxLevel = skill.MaxLevel
+    -- if skill level is in the config or the skill level is maxed
+    if Config.SkillsLevel[skillLevel] or #Config.SkillsLevel >= skillMaxLevel then
+        local info = Config.SkillsLevel[skillLevel]
+        local percentage = 0
+        if not info then
+            -- if maxed out choose last one
+            percentage = Config.SkillsLevel[#Config.SkillsLevel].percentage
+        else
+            percentage = Config.SkillsLevel[skillLevel].percentage
+        end
         data.money = data.money + (data.money * percentage)
         data.gold = data.gold + (data.gold * percentage)
         data.rolPoints = data.rolPoints + (data.rolPoints * percentage)
