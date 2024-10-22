@@ -161,7 +161,7 @@ CreateThread(function()
     end
 end)
 
-AddEventHandler("onResouceStop", function(resourceName)
+AddEventHandler("onResourceStop", function(resourceName)
     if GetCurrentResourceName() ~= resourceName then return end
     for i, v in ipairs(Config.trainers) do
         if v.NpcHandle then
