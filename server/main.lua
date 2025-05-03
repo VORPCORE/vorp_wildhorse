@@ -1,27 +1,76 @@
 local Core = exports.vorp_core:GetCore()
+local horsesBroken = {}
+
+-- save horses broken for security
+RegisterServerEvent("vorp_sellhorse:brokeHorse", function(netid)
+    local _source = source
+
+    local entity = NetworkGetEntityFromNetworkId(netid)
+    if DoesEntityExist(entity) then
+        if not horsesBroken[netid] then
+            horsesBroken[netid] = _source
+        end
+    end
+end)
 
 RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
     local _source = source
-    local Character = Core.getUser(_source)
-    if not Character then
-        return
-    end
+    local user = Core.getUser(_source)
+    if not user then return end
+
+    local character = user.getUsedCharacter
+    local job = character.job
+    local netid = data.netid
     local sourcePed = GetPlayerPed(_source)
     local sourceCoords = GetEntityCoords(sourcePed)
+
+    -- must be close to the seller to sell it
     local distance = #(data.coords - sourceCoords)
     if distance > 5 then
-        print(_source, Character.identifier, " this is a cheater bann player ")
-        Core.AddWebhook("Cheater", Config.WebhookCheatLog,
-            "player with steam: " .. Character.identifier .. " server id: " .. _source .. " is cheating")
+        Core.AddWebhook("Possible Cheater", Config.WebhookCheatLog,
+            "player with steam: " ..
+            character.identifier ..
+            " server id: " ..
+            _source .. " coords: " .. json.encode(data.coords) .. " distance is too far from the trainer")
         return
     end
 
-    Character = Character.getUsedCharacter
-    local skills = Character.skills
-    if not skills then return error("update vorp core") end
-    if not skills[Config.SkillName] then error("skill not found in vorp core config") end
+    if not Config.trainers[data.index].trainerjob[job] then
+        --! job is not found , means is different ffrom the statebag used on the client
+        Core.AddWebhook("Possible Cheater", Config.WebhookCheatLog,
+            "player with steam: " ..
+            character.identifier ..
+            " server id: " .. _source .. " coords: " .. json.encode(data.coords) .. " job doesnt match statebag")
+        return
+    end
+
+    -- must exist
+    local entity = NetworkGetEntityFromNetworkId(netid)
+    if not DoesEntityExist(entity) then
+        return print("horse not found with netid: " .. netid)
+    end
+
+    -- must have been broken by this source
+    if not horsesBroken[netid] or horsesBroken[netid] ~= _source then
+        return print("horse not broken with netid: " .. netid)
+    end
+
+    local skills = character.skills
+    if not skills then
+        return error("update vorp core")
+    end
 
     local skill = skills[Config.SkillName]
+    if not skill then
+        error("skill not found in vorp core config")
+    end
+
+    local model = Config.Animals[data.model]
+    if not model then
+        return print("model not found in config")
+    end
+
+
     local skillLevel = skill.Level
     local skillMaxLevel = skill.MaxLevel
     -- if skill level is in the config or the skill level is maxed
@@ -29,7 +78,6 @@ RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
         local info = Config.SkillsLevel[skillLevel]
         local percentage = 0
         if not info then
-            -- if maxed out choose last one
             percentage = Config.SkillsLevel[#Config.SkillsLevel].percentage
         else
             percentage = Config.SkillsLevel[skillLevel].percentage
@@ -39,44 +87,43 @@ RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
         data.rolPoints = data.rolPoints + (data.rolPoints * percentage)
     end
 
-    if type(data) == "table" then
-        if data.money ~= 0 then
-            Character.addCurrency(0, data.money)
-        end
-
-        if data.gold ~= 0 then
-            Character.addCurrency(1, data.gold)
-        end
-
-        if data.rolPoints ~= 0 then
-            Character.addCurrency(2, data.rolPoints)
-        end
-        -- add xp to skill
-        Character.setSkills(Config.SkillName, data.xp)
-    else
-        print(_source, Character.identifier, " this is a cheater bann player ")
-        Core.AddWebhook("Cheater", Config.WebhookCheatLog,
-            "player with steam: " .. Character.identifier .. " server id: " .. _source .. " is cheating")
+    if model.money ~= 0 then
+        character.addCurrency(0, model.money) -- add money
     end
+
+    if model.gold ~= 0 then
+        character.addCurrency(1, model.gold) -- add gold
+    end
+
+    if model.rolPoints ~= 0 then
+        character.addCurrency(2, model.rolPoints) -- add rolPoints
+    end
+
+    -- add xp to skill
+    character.setSkills(Config.SkillName, model.xp)
+    Core.NotifyRightTip(_source, Config.Language.AnimalSold .. " skills Gained: " .. model.xp .. " xp", 4000)
+    --! add webhook
+    Core.AddWebhook("Animal Sold", Config.WebhookAnimalSold,
+        "player with steam: " .. character.identifier .. " server id: " .. _source ..
+        " sold an animal : " ..
+        Config.Animals[data.model].name ..
+        " for $" .. data.money .. " money, " .. data.gold .. " gold, " .. data.rolPoints .. " rolPoints")
+
+    SetTimeout(4000, function()
+        if DoesEntityExist(entity) then
+            DeleteEntity(entity)
+        end
+        horsesBroken[netid] = nil
+    end)
 end)
 
-local function CheckJob(index, job)
-    for i, value in ipairs(Config.trainers[index].trainerjob) do
-        if value == job then
-            return true
+--on player disconnect
+AddEventHandler("playerDropped", function()
+    local _source = source
+
+    for k, v in pairs(horsesBroken) do
+        if v == _source then
+            horsesBroken[k] = nil
         end
     end
-    return false
-end
-
-Core.Callback.Register('vorp_sellhorse:getjob', function(source, cb, args)
-    local _source = source
-    local index = args
-    local Character = Core.getUser(_source).getUsedCharacter
-    local job = Character.job
-    if CheckJob(index, job) then
-        return cb(true)
-    end
-    Core.NotifyObjective(_source, "you do not have the right job to sell this animal", 4000)
-    return cb(false)
 end)

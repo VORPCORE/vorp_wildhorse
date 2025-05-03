@@ -1,7 +1,8 @@
 local Core = exports.vorp_core:GetCore()
+local horsesBroken = {}
 
 local function spawnNpc()
-    for i, v in ipairs(Config.trainers) do
+    for _, v in ipairs(Config.trainers) do
         if Config.aiTrainerped then
             local hashModel = (v.npcmodel)
             if not IsModelValid(hashModel) then
@@ -32,7 +33,7 @@ local function spawnNpc()
 end
 
 local function createBlip()
-    for i, v in ipairs(Config.trainers) do
+    for _, v in ipairs(Config.trainers) do
         local blip = BlipAddForCoords(1664425300, v.coords.x, v.coords.y, v.coords.z)
         SetBlipSprite(blip, v.blip, true)
         SetBlipName(blip, v.trainername)
@@ -41,17 +42,13 @@ local function createBlip()
 end
 
 
-
-RegisterNetEvent("vorp:SelectedCharacter", function()
-    Wait(5000)
-    spawnNpc()
-    createBlip()
-end)
-
-
-local tamestate = 0
 CreateThread(function() -- captures event when you break horse in
     repeat Wait(5000) until LocalPlayer.state.IsInSession
+    Wait(5000)
+
+    spawnNpc()
+    createBlip()
+
     while true do
         Wait(0)
         local size = GetNumberOfEvents(0)
@@ -59,40 +56,54 @@ CreateThread(function() -- captures event when you break horse in
             for i = 0, size - 1 do
                 local eventAtIndex = GetEventAtIndex(0, i)
                 if eventAtIndex == GetHashKey("EVENT_HORSE_BROKEN") then
-                    tamestate = 1
+                    local mount = GetMount(PlayerPedId())
+                    if mount > 0 and not horsesBroken[mount] then
+                        if NetworkGetEntityIsNetworked(mount) then
+                            local netid = NetworkGetNetworkIdFromEntity(mount)
+                            TriggerServerEvent("vorp_sellhorse:brokeHorse", netid)
+                            horsesBroken[netid] = true
+                        end
+                    end
                 end
             end
         end
     end
 end)
 
-local function sellAnimal(coords)         -- Selling horse function
+local function sellAnimal(coords, index)  -- Selling horse function
     local horse = GetMount(PlayerPedId()) -- Gets mount
     local model = GetEntityModel(horse)
-    if model ~= 0 then
-        if tamestate > 0 then             -- checks to see if you recently broke the horse in
-            if Config.Animals[model] then -- Paying for animals
-                local animal = Config.Animals[model]
 
-                local data = {
-                    money = animal.money,
-                    gold = animal.gold,
-                    rolPoints = animal.rolPoints,
-                    xp = animal.xp,
-                    coords = coords
-                }
 
-                TriggerServerEvent("vorp_sellhorse:giveReward", data)
-                Core.NotifyRightTip(Config.Language.AnimalSold, 4000) -- Sold notification
-                DeletePed(horse)
-                Wait(100)
-                tamestate = 0
-            else
-                Core.NotifyRightTip(Config.Language.NotInTheTrainer, 4000) -- Notification when horse is not recognized
-            end
-        else
-            Core.NotifyRightTip(Config.Language.NotBroken, 4000) -- Notification when you didn't break the horse
+    if model ~= 0 and horse > 0 then
+        if not NetworkGetEntityIsNetworked(horse) then
+            Core.NotifyRightTip("This horse is not networked", 4000) -- Notification when horse is not networked
+            return
         end
+
+        local animal = Config.Animals[model]
+        if not animal then
+            Core.NotifyRightTip(Config.Language.NotInTheTrainer, 4000) -- Notification when horse is not recognized
+            return
+        end
+
+        local isHorseBroken = horsesBroken[horse]
+        if not isHorseBroken then
+            Core.NotifyRightTip(Config.Language.NotBroken, 4000) -- Notification when you didn't break the horse
+            return
+        end
+
+        local data = {
+            coords = coords,
+            model = model,
+            index = index,
+            netid = NetworkGetNetworkIdFromEntity(horse)
+        }
+
+        TriggerServerEvent("vorp_sellhorse:giveReward", data)
+        TaskDismountAnimal(PlayerPedId(), 17, 0, 0, 0, horse)
+        horsesBroken[horse] = nil
+        Wait(100)
     else
         Core.NotifyRightTip(Config.Language.NoMount, 4000) -- Notification when you don't have a mount
     end
@@ -116,6 +127,7 @@ end
 CreateThread(function()
     repeat Wait(5000) until LocalPlayer.state.IsInSession
     local group, prompt = createPrompt()
+
     while true do
         local sleep = 1000
         for index, v in ipairs(Config.trainers) do
@@ -142,15 +154,15 @@ CreateThread(function()
 
                 if UiPromptHasStandardModeCompleted(prompt, 0) then -- need to add here player is in the locations
                     if Config.joblocked then
-                        Core.Callback.TriggerAsync('vorp_sellhorse:getjob', function(result)
-                            if result then
-                                sellAnimal(v.coords)
-                            else
-                                Core.NotifyRightTip(Config.Language.notatrainer .. " : " .. v.trainerjob, 4000)
-                            end
-                        end, index)
+                        -- light check avoids callbacks
+                        local job = LocalPlayer.state.Character.Job
+                        if v.trainerjob[job] then
+                            sellAnimal(v.coords, index)
+                        else
+                            Core.NotifyRightTip(Config.Language.notatrainer .. " : " .. v.trainerjob, 4000)
+                        end
                     else
-                        sellAnimal(v.coords)
+                        sellAnimal(v.coords, index)
                     end
                     Wait(1000)
                 end
@@ -163,7 +175,7 @@ end)
 
 AddEventHandler("onResourceStop", function(resourceName)
     if GetCurrentResourceName() ~= resourceName then return end
-    for i, v in ipairs(Config.trainers) do
+    for _, v in ipairs(Config.trainers) do
         if v.NpcHandle then
             if DoesEntityExist(v.NpcHandle) then
                 DeleteEntity(v.NpcHandle)
@@ -175,18 +187,3 @@ AddEventHandler("onResourceStop", function(resourceName)
         end
     end
 end)
-
-
--- DEV TOOLS --
-
---[[ RegisterCommand("horse", function() -- prints what entity model current mount is
-    local horse = Citizen.InvokeNative(0xE7E11B8DCBED1058, PlayerPedId())
-    local model = GetEntityModel(horse)
-    print("model", model)
-end)
-
-RegisterCommand("dh", function()                                          -- deletes horse
-    local horse = Citizen.InvokeNative(0xE7E11B8DCBED1058, PlayerPedId()) --
-    DeletePed(horse)
-end)
- ]]

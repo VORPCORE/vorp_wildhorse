@@ -8,15 +8,18 @@ Config.Language = {
     NotBroken = "Your horse is not broken",
 }
 
-Config.aiTrainerped = true  -- spawn ai trainer ped set to false if you dont want an ai trainer ped to spawn
-Config.joblocked = false    -- lock the trainer so only people with the job can access. u can change access to each trainer by editing this  trainerjob= "trainer"
+Config.aiTrainerped = true    -- spawn ai trainer ped set to false if you dont want an ai trainer ped to spawn
 
-Config.WebhookCheatLog = "" -- webhook for cheater log
+Config.joblocked = false      -- lock the trainer so only people with the job can access. u can change access to each trainer by editing this  trainerjob= "trainer"
+
+Config.WebhookCheatLog = ""   -- webhook for cheater log
+
+Config.WebhookAnimalSold = "" -- webhook for animal sold
 Config.trainers = {
 
     {
         trainername = "Blackwater Trainer",
-        trainerjob = { "trainer" },
+        trainerjob = { trainer = true },
         pressToSell = "sell",
         blip = -1103135225,
         npcmodel = "A_M_M_ValFarmer_01",
@@ -27,7 +30,7 @@ Config.trainers = {
 
     {
         trainername = "Saint Denis Trainer",
-        trainerjob = { "trainer" },
+        trainerjob = { trainer = true },
         pressToSell = "sell",
         blip = -1103135225,
         npcmodel = "A_M_M_ValFarmer_01",
@@ -38,7 +41,7 @@ Config.trainers = {
 
     {
         trainername = "Armadillo Trainer",
-        trainerjob = { "trainer" },
+        trainerjob = { trainer = true },
         pressToSell = "sell",
         blip = -1103135225,
         npcmodel = "A_M_M_ValFarmer_01",
