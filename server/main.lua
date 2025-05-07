@@ -35,13 +35,15 @@ RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
         return
     end
 
-    if not Config.trainers[data.index].trainerjob[job] then
-        --! job is not found , means is different ffrom the statebag used on the client
-        Core.AddWebhook("Possible Cheater", Config.WebhookCheatLog,
-            "player with steam: " ..
-            character.identifier ..
-            " server id: " .. _source .. " coords: " .. json.encode(data.coords) .. " job doesnt match statebag")
-        return
+    if Config.joblocked then
+        if not Config.trainers[data.index].trainerjob[job] then
+            --! job is not found , means is different ffrom the statebag used on the client
+            Core.AddWebhook("Possible Cheater", Config.WebhookCheatLog,
+                "player with steam: " ..
+                character.identifier ..
+                " server id: " .. _source .. " coords: " .. json.encode(data.coords) .. " job doesnt match statebag")
+            return
+        end
     end
 
     -- must exist

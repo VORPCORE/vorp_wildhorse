@@ -55,7 +55,7 @@ CreateThread(function() -- captures event when you break horse in
         if size > 0 then
             for i = 0, size - 1 do
                 local eventAtIndex = GetEventAtIndex(0, i)
-                if eventAtIndex == GetHashKey("EVENT_HORSE_BROKEN") then
+                if eventAtIndex == `EVENT_HORSE_BROKEN` then
                     local mount = GetMount(PlayerPedId())
                     if mount > 0 and not horsesBroken[mount] then
                         if NetworkGetEntityIsNetworked(mount) then
