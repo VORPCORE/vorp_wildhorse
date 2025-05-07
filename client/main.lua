@@ -61,7 +61,7 @@ CreateThread(function() -- captures event when you break horse in
                         if NetworkGetEntityIsNetworked(mount) then
                             local netid = NetworkGetNetworkIdFromEntity(mount)
                             TriggerServerEvent("vorp_sellhorse:brokeHorse", netid)
-                            horsesBroken[netid] = true
+                            horsesBroken[mount] = true
                         end
                     end
                 end
