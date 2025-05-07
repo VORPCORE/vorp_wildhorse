@@ -84,9 +84,9 @@ RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
         else
             percentage = Config.SkillsLevel[skillLevel].percentage
         end
-        data.money = data.money + (data.money * percentage)
-        data.gold = data.gold + (data.gold * percentage)
-        data.rolPoints = data.rolPoints + (data.rolPoints * percentage)
+        model.money = model.money + (model.money * percentage)
+        model.gold = model.gold + (model.gold * percentage)
+        model.rolPoints = model.rolPoints + (model.rolPoints * percentage)
     end
 
     if model.money ~= 0 then
@@ -108,8 +108,8 @@ RegisterServerEvent("vorp_sellhorse:giveReward", function(data)
     Core.AddWebhook("Animal Sold", Config.WebhookAnimalSold,
         "player with steam: " .. character.identifier .. " server id: " .. _source ..
         " sold an animal : " ..
-        Config.Animals[data.model].name ..
-        " for $" .. data.money .. " money, " .. data.gold .. " gold, " .. data.rolPoints .. " rolPoints")
+        model.name ..
+        " for $" .. model.money .. " money, " .. model.gold .. " gold, " .. model.rolPoints .. " rolPoints")
 
     SetTimeout(4000, function()
         if DoesEntityExist(entity) then
